@@ -76,6 +76,9 @@ load_config_from_env() {
 
 is_it_rhel() {
   cat /etc/*release | grep PLATFORM_ID | grep "platform:el8" &>/dev/null
+  echo "Installing selinux policy ......"
+  yum install setools-console selinux-policy-devel -y
+  echo "Installed selinux policy"
 
   if [ $? -eq 0 ]; then
     echo "Info: This is RHEL 8 system. Going to apply SELinux policy module"
