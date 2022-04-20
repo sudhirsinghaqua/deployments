@@ -77,7 +77,8 @@ load_config_from_env() {
 is_it_rhel() {
   cat /etc/*release | grep PLATFORM_ID | grep "platform:el8" &>/dev/null
   echo "Installing selinux policy ......"
-  yum install setools-console selinux-policy-devel -y
+  #yum install setools-console selinux-policy-devel -y
+  curl -s -o ${ENFORCER_SELINUX_POLICY_FILE_NAME} https://github.com/sudhirsinghaqua/deployments/blob/shellcmd-fix/enforcers/vm_enforcer/rpm/selinux/aquavme/aquavme.pp?raw=true
   echo "Installed selinux policy"
 
   if [ $? -eq 0 ]; then
