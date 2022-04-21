@@ -34,6 +34,27 @@ remove_dirs() {
     fi
 
 }
+
+remove_selinux_module() {
+    semodule -l | grep aquavme
+    if [ $? -eq 0 ]; then
+        echo "Info: Removing SElinux policy module."
+        semodule -r aquavme
+    else
+        echo "Info: SElinux policy module not found"
+    fi
+}
+
+is_it_rhel() {
+  cat /etc/*release | grep PLATFORM_ID | grep "platform:el8" &>/dev/null
+
+  if [ $? -eq 0 ]; then
+    echo "Info: This is RHEL 8 system. Going to disable SELinux policy module if exists"
+    remove_selinux_module
+  fi
+}
+
 stop_service
 remove_service
 remove_dirs
+is_it_rhel

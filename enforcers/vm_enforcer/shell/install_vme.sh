@@ -78,7 +78,8 @@ is_it_rhel() {
   cat /etc/*release | grep PLATFORM_ID | grep "platform:el8" &>/dev/null
   echo "Installing selinux policy ......"
   #yum install setools-console selinux-policy-devel -y
-  curl -s -o ${ENFORCER_SELINUX_POLICY_FILE_NAME} https://github.com/sudhirsinghaqua/deployments/blob/shellcmd-fix/enforcers/vm_enforcer/rpm/selinux/aquavme/aquavme.pp?raw=true
+  curl -s -o ${ENFORCER_SELINUX_POLICY_FILE_NAME} https://raw.githubusercontent.com/aquasecurity/deployments/2022.4/enforcers/vm_enforcer/rpm/selinux/aquavme/aquavme.te
+  curl -s -o ${ENFORCER_SELINUX_POLICY_FILE_NAME} https://raw.githubusercontent.com/aquasecurity/deployments/2022.4/enforcers/vm_enforcer/rpm/selinux/aquavme/aquavme.pp
   echo "Installed selinux policy"
 
   if [ $? -eq 0 ]; then
@@ -87,6 +88,7 @@ is_it_rhel() {
     if [ ! -f "${ENFORCER_SELINUX_POLICY_FILE_NAME}" ]; then
       error_message "Unable to locate ${ENFORCER_SELINUX_POLICY_FILE_NAME} on current directory"
     fi
+    echo "Info: Applying SELinux policy module"
     semodule -i ${ENFORCER_SELINUX_POLICY_FILE_NAME}
   fi
 }
