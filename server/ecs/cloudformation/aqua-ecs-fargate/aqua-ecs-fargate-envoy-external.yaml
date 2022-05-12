@@ -8,7 +8,7 @@ Metadata:
       - Label:
           default: ECS Infrastructure Configuration
         Parameters:
-          - EcsClusterName
+          - ClusterName
           - VpcId
           - VpcCidr
           - EcsInstanceSubnets
@@ -35,7 +35,7 @@ Metadata:
     ParameterLabels:
       SSLCert:
         default: SSL cert ARN
-      EcsClusterName:
+      ClusterName:
         default: ECS cluster name
       Region:
         default: AWS region
@@ -63,9 +63,12 @@ Parameters:
   AquaEnvoyImage:
     Type: String
     Description: Enter envoy image path on ECR
-  EcsClusterName:
-    Description: Existing ECS cluster name
+  ClusterName:
+    Description: Name of ecs cluster to be created
     Type: String
+    MinLength: '5'
+    MaxLength: '25'
+    AllowedPattern: '[a-z0-9-]*'
   VpcId:
     Description: VpcId to deploy into
     Type: 'AWS::EC2::VPC::Id'
@@ -121,6 +124,10 @@ Conditions:
   CreateAuditrds: !Equals [!Ref AuditRDS, 'Yes']
   ReplaceAuditrds: !Equals [!Ref AuditRDS, 'No']    
 Resources:
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref ClusterName
   AquaConsole:
     Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
     DependsOn:
@@ -128,7 +135,7 @@ Resources:
     Properties:
       Name: !Join
         - '-'
-        - - !Ref EcsClusterName
+        - - !Ref EcsCluster
           - AquaConsole
       Scheme: internet-facing
       SecurityGroups:
@@ -145,7 +152,7 @@ Resources:
     Properties:
       Family: !Join
         - '-'
-        - - !Ref EcsClusterName
+        - - !Ref EcsCluster
           - aqua-console
       RequiresCompatibilities:
         - FARGATE
@@ -156,7 +163,7 @@ Resources:
       ContainerDefinitions:
         - Name: !Join
             - '-'
-            - - !Ref EcsClusterName
+            - - !Ref EcsCluster
               - aqua-console
           Image: !Ref AquaServerImage
           PortMappings:
@@ -170,7 +177,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Join ['-', ['/aqua/console', !Ref EcsClusterName]]
+              awslogs-group: !Join ['-', ['/aqua/console', !Ref EcsCluster]]
               awslogs-region: !Ref Region
               awslogs-stream-prefix: aquaConsole
           Secrets:
@@ -211,7 +218,7 @@ Resources:
       - AquaConsoleListener
       - AquaConsoleGrpcListener
     Properties:
-      Cluster: !Ref EcsClusterName
+      Cluster: !Ref EcsCluster
       LaunchType: FARGATE
       NetworkConfiguration:
         AwsvpcConfiguration:
@@ -221,7 +228,7 @@ Resources:
           Subnets: !Ref EcsInstanceSubnets
       ServiceName: !Join
         - '-'
-        - - !Ref EcsClusterName
+        - - !Ref EcsCluster
           - aqua-console
       DesiredCount: '1'
       DeploymentConfiguration:
@@ -230,13 +237,13 @@ Resources:
       LoadBalancers:
         - ContainerName: !Join
             - '-'
-            - - !Ref EcsClusterName
+            - - !Ref EcsCluster
               - aqua-console
           ContainerPort: '8080'
           TargetGroupArn: !Ref AquaConsoleTargetGroup
         - ContainerName: !Join
             - '-'
-            - - !Ref EcsClusterName
+            - - !Ref EcsCluster
               - aqua-console
           ContainerPort: '8443'
           TargetGroupArn: !Ref AquaConsoleGrpcTargetGroup
@@ -268,7 +275,7 @@ Resources:
         HttpCode: '200'
       Name: !Join
         - '-'
-        - - !Ref EcsClusterName
+        - - !Ref EcsCluster
           - aqua-console
       Port: '8080'
       Protocol: HTTP
@@ -314,7 +321,7 @@ Resources:
       HealthCheckPort: 8443
       Name: !Join
         - '-'
-        - - !Ref EcsClusterName
+        - - !Ref EcsCluster
           - aqua-envoy
       Port: '443'
       Protocol: TCP
@@ -331,7 +338,7 @@ Resources:
       HealthCheckPort: 8443
       Name: !Join
         - '-'
-        - - !Ref EcsClusterName
+        - - !Ref EcsCluster
           - aqua-grpc
       Port: '8443'
       Protocol: TCP
@@ -348,7 +355,7 @@ Resources:
     Properties:
       Family: !Join
         - '-'
-        - - !Ref EcsClusterName
+        - - !Ref EcsCluster
           - aqua-envoy
       NetworkMode: awsvpc
       ExecutionRoleArn: !Ref AquaEcsTaskRole
@@ -360,7 +367,7 @@ Resources:
       ContainerDefinitions:
         - Name: !Join
             - '-'
-            - - !Ref EcsClusterName
+            - - !Ref EcsCluster
               - aqua-envoy
           Image: !Ref AquaEnvoyImage
           PortMappings:
@@ -371,7 +378,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Join ['-', ['/aqua/envoy', !Ref EcsClusterName]]
+              awslogs-group: !Join ['-', ['/aqua/envoy', !Ref EcsCluster]]
               awslogs-region: !Ref Region
               awslogs-stream-prefix: aquaEnvoy
           Secrets:
@@ -415,7 +422,7 @@ Resources:
     Properties:
       Family: !Join
         - '-'
-        - - !Ref EcsClusterName
+        - - !Ref EcsCluster
           - aqua-gateway
       NetworkMode: awsvpc
       ExecutionRoleArn: !Ref AquaEcsTaskRole
@@ -427,7 +434,7 @@ Resources:
       ContainerDefinitions:
         - Name: !Join
             - '-'
-            - - !Ref EcsClusterName
+            - - !Ref EcsCluster
               - aqua-gateway
           Image: !Ref AquaGatewayImage
           PortMappings:
@@ -441,7 +448,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Join ['-', ['/aqua/gateway', !Ref EcsClusterName]]
+              awslogs-group: !Join ['-', ['/aqua/gateway', !Ref EcsCluster]]
               awslogs-region: !Ref Region
               awslogs-stream-prefix: aquaGateway
           Secrets:
@@ -497,7 +504,7 @@ Resources:
         FailureThreshold: 1
       Name: !Join
         - '-'
-        - - !Ref EcsClusterName
+        - - !Ref EcsCluster
           - aqua-gateway
       NamespaceId: !Ref PrivateNamespace
   AquaGatewayService:
@@ -512,10 +519,10 @@ Resources:
           SecurityGroups:
             - !Ref AquaFargateSecurityGroup
           Subnets: !Ref EcsInstanceSubnets
-      Cluster: !Ref EcsClusterName
+      Cluster: !Ref EcsCluster
       ServiceName: !Join
         - '-'
-        - - !Ref EcsClusterName
+        - - !Ref EcsCluster
           - aqua-gateway
       DesiredCount: '2'
       DeploymentConfiguration:
@@ -540,10 +547,10 @@ Resources:
           SecurityGroups:
             - !Ref AquaFargateSecurityGroup
           Subnets: !Ref EcsInstanceSubnets
-      Cluster: !Ref EcsClusterName
+      Cluster: !Ref EcsCluster
       ServiceName: !Join
         - '-'
-        - - !Ref EcsClusterName
+        - - !Ref EcsCluster
           - aqua-envoy
       DesiredCount: '2'
       DeploymentConfiguration:
@@ -552,7 +559,7 @@ Resources:
       LoadBalancers:
         - ContainerName: !Join
             - '-'
-            - - !Ref EcsClusterName
+            - - !Ref EcsCluster
               - aqua-envoy
           ContainerPort: '8443'
           TargetGroupArn: !Ref AquaEnvoyTargetGroup
@@ -608,7 +615,7 @@ Resources:
     Properties:
       RoleName: !Join
         - '-'
-        - - !Ref EcsClusterName
+        - - !Ref EcsCluster
           - AquaEcsTaskRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -623,7 +630,7 @@ Resources:
       Policies:
         - PolicyName: !Join
             - '-'
-            - - !Ref EcsClusterName
+            - - !Ref EcsCluster
               - AquaScannerPolicy
           PolicyDocument:
             Version: 2012-10-17
@@ -644,7 +651,7 @@ Resources:
               - !Ref 'AWS::NoValue'
         - PolicyName: !Join
             - '-'
-            - - !Ref EcsClusterName
+            - - !Ref EcsCluster
               - AquaSecretsManagerPolicy
           PolicyDocument:
             Version: 2012-10-17
@@ -657,7 +664,7 @@ Resources:
                   - !Ref SecretU
         - PolicyName: !Join
             - '-'
-            - - !Ref EcsClusterName
+            - - !Ref EcsCluster
               - KMSPermisions
           PolicyDocument:
             Version: 2012-10-17
@@ -670,24 +677,24 @@ Resources:
   AquaConsoleLogs:
     Type: 'AWS::Logs::LogGroup'
     Properties:
-      LogGroupName: !Join ['-', ['/aqua/console', !Ref EcsClusterName]]
+      LogGroupName: !Join ['-', ['/aqua/console', !Ref EcsCluster]]
       RetentionInDays: 30
   AquaGatewayLogs:
     Type: 'AWS::Logs::LogGroup'
     Properties:
-      LogGroupName: !Join ['-', ['/aqua/gateway', !Ref EcsClusterName]]
+      LogGroupName: !Join ['-', ['/aqua/gateway', !Ref EcsCluster]]
       RetentionInDays: 30
   AquaEnvoyLogs:
     Type: 'AWS::Logs::LogGroup'
     Properties:
-      LogGroupName: !Join ['-', ['/aqua/envoy', !Ref EcsClusterName]]
+      LogGroupName: !Join ['-', ['/aqua/envoy', !Ref EcsCluster]]
       RetentionInDays: 30
   AquaNlb:
     Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
     Properties:
       Name: !Join
         - '-'
-        - - !Ref EcsClusterName
+        - - !Ref EcsCluster
           - aqua-nlb
       Scheme: internet-facing
       Subnets: !Ref LbSubnets
